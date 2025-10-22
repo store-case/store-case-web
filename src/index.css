@@ -1,0 +1,11 @@
+:root,
+body {
+  margin: 0;
+  font-family: inherit;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}

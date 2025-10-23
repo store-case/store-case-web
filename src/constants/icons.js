@@ -12,6 +12,8 @@ const ICONS = {
   ruleError: '/public/icons/rule-error.svg',
   checklist: '/public/icons/check.svg',
   google: '/public/icons/google.svg',
+  delete: '/public/icons/delete.svg',
+  add: '/public/icons/add.svg',
 }
 
 export default ICONS

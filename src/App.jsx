@@ -3,11 +3,12 @@ import './App.css'
 import LoginPage from './pages/Login'
 import SignUpPage from './pages/SignUp'
 import MainPage from './pages/Main'
+import ProductRegisterPage from './pages/ProductRegister'
 import { useAuth } from './contexts/AuthContext'
 
 const App = () => {
   const navigate = useNavigate()
-  const { isAuthenticated, signIn, signOut } = useAuth()
+  const { isAuthenticated, signIn, signOut, user } = useAuth()
 
   const handleLoginSuccess = (payload) => {
     signIn(payload)
@@ -49,6 +50,20 @@ const App = () => {
         <Route
           path="/"
           element={isAuthenticated ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/seller/products/new"
+          element={
+            isAuthenticated ? (
+              user?.role === 'STORE' ? (
+                <ProductRegisterPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
         <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />
       </Routes>

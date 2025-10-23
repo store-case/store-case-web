@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import FormField from '../components/FormField'
+import AuthHeader from '../components/AuthHeader'
 import ICONS from '../constants/icons'
 
 const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
@@ -83,13 +84,7 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
 
   return (
     <div className="auth-card auth-card--login">
-      <header className="auth__header">
-        <button type="button" className="auth__icon-button" aria-label="뒤로 가기" onClick={onBack}>
-          <img src={ICONS.arrowLeft} alt="" aria-hidden="true" />
-        </button>
-        <h1 className="auth__title">로그인</h1>
-        <span aria-hidden="true" className="auth__icon-placeholder" />
-      </header>
+      <AuthHeader title="로그인" onBack={onBack} />
 
       <main className="auth__content auth__content--login">
         <section className="auth-brand" aria-labelledby="brand-title">

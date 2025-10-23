@@ -1,32 +1,21 @@
-import { useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 import LoginPage from './pages/Login'
 import SignUpPage from './pages/SignUp'
 import MainPage from './pages/Main'
+import { useAuth } from './contexts/AuthContext'
 
 const App = () => {
   const navigate = useNavigate()
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem('accessToken') || '')
+  const { isAuthenticated, signIn, signOut } = useAuth()
 
-  useEffect(() => {
-    if (accessToken) {
-      localStorage.setItem('accessToken', accessToken)
-    } else {
-      localStorage.removeItem('accessToken')
-    }
-  }, [accessToken])
-
-  const isAuthenticated = useMemo(() => Boolean(accessToken), [accessToken])
-
-  const handleLoginSuccess = (token) => {
-    if (!token) return
-    setAccessToken(token)
+  const handleLoginSuccess = (payload) => {
+    signIn(payload)
     navigate('/', { replace: true })
   }
 
   const handleLogout = () => {
-    setAccessToken('')
+    signOut()
     navigate('/login', { replace: true })
   }
 

@@ -4,6 +4,7 @@ const ICONS = {
   user: '/public/icons/user.svg',
   mail: '/public/icons/mail.svg',
   lock: '/public/icons/lock.svg',
+  eye: '/public/icons/eye.svg',
   eyeOff: '/public/icons/eye-off.svg',
   key: '/public/icons/key.svg',
   phone: '/public/icons/phone.svg',

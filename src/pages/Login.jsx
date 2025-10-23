@@ -8,7 +8,12 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
     password: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [feedback, setFeedback] = useState(null)
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev)
+  }
 
   const handleChange = (field) => (event) => {
     const { value } = event.target
@@ -50,18 +55,22 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
         throw new Error(errorMessage)
       }
 
-      if (data?.data) {
-        onSuccess?.(data.data)
-      } else {
-        setFeedback({
-          type: 'success',
-          message: data?.message || '로그인에 성공했습니다.',
-        })
-        setFormValues({
-          email: '',
-          password: '',
-        })
+      const payload = data?.data
+
+      if (payload?.accessToken) {
+        onSuccess?.(payload)
+        return
       }
+
+      setFeedback({
+        type: 'success',
+        message: data?.message || '로그인에 성공했습니다.',
+      })
+      setFormValues({
+        email: '',
+        password: '',
+      })
+      setShowPassword(false)
     } catch (error) {
       setFeedback({
         type: 'error',
@@ -123,7 +132,7 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
                 <input
                   id="loginPassword"
                   name="loginPassword"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="비밀번호를 입력하세요"
                   className="auth-input__control"
                   autoComplete="current-password"
@@ -134,9 +143,11 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
               <button
                 type="button"
                 className="auth__icon-button auth__icon-button--muted"
-                aria-label="비밀번호 표시"
+                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
+                aria-pressed={showPassword}
+                onClick={togglePasswordVisibility}
               >
-                <img src={ICONS.eyeOff} alt="" aria-hidden="true" />
+                <img src={(showPassword ? ICONS.eye : ICONS.eyeOff) || ICONS.eyeOff} alt="" aria-hidden="true" />
               </button>
             </div>
           </FormField>

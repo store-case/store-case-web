@@ -1,16 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 import LoginPage from './pages/Login'
 import SignUpPage from './pages/SignUp'
 import MainPage from './pages/Main'
 
-const VIEWS = {
-  LOGIN: 'login',
-  SIGNUP: 'signup',
-}
-
 const App = () => {
-  const [view, setView] = useState(VIEWS.LOGIN)
+  const navigate = useNavigate()
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem('accessToken') || '')
 
   useEffect(() => {
@@ -24,36 +20,51 @@ const App = () => {
   const isAuthenticated = useMemo(() => Boolean(accessToken), [accessToken])
 
   const handleLoginSuccess = (token) => {
-    if (token) {
-      setAccessToken(token)
-      setView(VIEWS.MAIN)
-    }
+    if (!token) return
+    setAccessToken(token)
+    navigate('/', { replace: true })
   }
 
   const handleLogout = () => {
     setAccessToken('')
-    setView(VIEWS.LOGIN)
+    navigate('/login', { replace: true })
   }
 
-  const renderView = () => {
-    if (!isAuthenticated) {
-      if (view === VIEWS.SIGNUP) {
-        return <SignUpPage onBack={() => setView(VIEWS.LOGIN)} onSuccess={() => setView(VIEWS.LOGIN)} />
-      }
-
-      return (
-        <LoginPage
-          onBack={() => setView(VIEWS.LOGIN)}
-          onGoSignUp={() => setView(VIEWS.SIGNUP)}
-          onSuccess={handleLoginSuccess}
+  return (
+    <div className="app-root">
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/" replace />
+            ) : (
+              <LoginPage
+                onBack={() => navigate(-1)}
+                onGoSignUp={() => navigate('/join')}
+                onSuccess={handleLoginSuccess}
+              />
+            )
+          }
         />
-      )
-    }
-
-    return <MainPage onLogout={handleLogout} />
-  }
-
-  return <div className="app-root">{renderView()}</div>
+        <Route
+          path="/join"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/" replace />
+            ) : (
+              <SignUpPage onBack={() => navigate(-1)} onSuccess={() => navigate('/login', { replace: true })} />
+            )
+          }
+        />
+        <Route
+          path="/"
+          element={isAuthenticated ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+        />
+        <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />
+      </Routes>
+    </div>
+  )
 }
 
 export default App

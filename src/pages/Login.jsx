@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import FormField from '../components/FormField'
+import AuthInput from '../components/AuthInput'
 import AuthHeader from '../components/AuthHeader'
+import PasswordInput from '../components/PasswordInput'
 import ICONS from '../constants/icons'
 
 const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
@@ -9,12 +11,7 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
     password: '',
   })
   const [submitting, setSubmitting] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const [feedback, setFeedback] = useState(null)
-
-  const togglePasswordVisibility = () => {
-    setShowPassword((prev) => !prev)
-  }
 
   const handleChange = (field) => (event) => {
     const { value } = event.target
@@ -71,7 +68,6 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
         email: '',
         password: '',
       })
-      setShowPassword(false)
     } catch (error) {
       setFeedback({
         type: 'error',
@@ -101,50 +97,28 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <FormField label="이메일" labelFor="loginEmail">
-            <div className="auth-input">
-              <span className="auth-input__icon">
-                <img src={ICONS.mail} alt="" aria-hidden="true" />
-              </span>
-              <input
-                id="loginEmail"
-                name="loginEmail"
-                type="email"
-                placeholder="이메일을 입력하세요"
-                className="auth-input__control"
-                autoComplete="username"
-                value={formValues.email}
-                onChange={handleChange('email')}
-              />
-            </div>
+            <AuthInput
+              id="loginEmail"
+              name="loginEmail"
+              type="email"
+              placeholder="이메일을 입력하세요"
+              autoComplete="username"
+              value={formValues.email}
+              onChange={handleChange('email')}
+              icon={ICONS.mail}
+            />
           </FormField>
 
           <FormField label="비밀번호" labelFor="loginPassword">
-            <div className="auth-input auth-input--with-action">
-              <div className="auth-input__left">
-                <span className="auth-input__icon">
-                  <img src={ICONS.lock} alt="" aria-hidden="true" />
-                </span>
-                <input
-                  id="loginPassword"
-                  name="loginPassword"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="비밀번호를 입력하세요"
-                  className="auth-input__control"
-                  autoComplete="current-password"
-                  value={formValues.password}
-                  onChange={handleChange('password')}
-                />
-              </div>
-              <button
-                type="button"
-                className="auth__icon-button auth__icon-button--muted"
-                aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
-                aria-pressed={showPassword}
-                onClick={togglePasswordVisibility}
-              >
-                <img src={(showPassword ? ICONS.eye : ICONS.eyeOff) || ICONS.eyeOff} alt="" aria-hidden="true" />
-              </button>
-            </div>
+            <PasswordInput
+              id="loginPassword"
+              name="loginPassword"
+              placeholder="비밀번호를 입력하세요"
+              autoComplete="current-password"
+              value={formValues.password}
+              onChange={handleChange('password')}
+              icon={ICONS.lock}
+            />
           </FormField>
 
           <div className="auth-login-options">

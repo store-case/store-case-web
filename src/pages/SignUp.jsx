@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import FormField from '../components/FormField'
 import AuthHeader from '../components/AuthHeader'
+import PasswordInput from '../components/PasswordInput'
+import AuthInput from '../components/AuthInput'
 import ICONS from '../constants/icons'
 
 const AGREEMENTS = [
@@ -114,40 +116,30 @@ const SignUpPage = ({ onBack, onSuccess }) => {
       <main className="auth__content auth__content--signup">
         <form className="auth-form auth-form--signup" onSubmit={handleSubmit}>
           <FormField label="이름" labelFor="signUpName" labelSuffix={<RequiredMark />}>
-            <div className="auth-input">
-              <span className="auth-input__icon">
-                <img src={ICONS.user} alt="" aria-hidden="true" />
-              </span>
-              <input
-                id="signUpName"
-                name="signUpName"
-                type="text"
-                placeholder="이름을 입력하세요"
-                className="auth-input__control"
-                autoComplete="name"
-                value={formValues.name}
-                onChange={handleChange('name')}
-              />
-            </div>
+            <AuthInput
+              id="signUpName"
+              name="signUpName"
+              type="text"
+              placeholder="이름을 입력하세요"
+              autoComplete="name"
+              icon={ICONS.user}
+              value={formValues.name}
+              onChange={handleChange('name')}
+            />
           </FormField>
 
           <FormField label="이메일 (아이디)" labelFor="signUpEmail" labelSuffix={<RequiredMark />}>
             <div className="auth-field__group">
-              <div className="auth-input">
-                <span className="auth-input__icon">
-                  <img src={ICONS.mail} alt="" aria-hidden="true" />
-                </span>
-                <input
-                  id="signUpEmail"
-                  name="signUpEmail"
-                  type="email"
-                  placeholder="이메일을 입력하세요"
-                  className="auth-input__control"
-                  autoComplete="email"
-                  value={formValues.email}
-                  onChange={handleChange('email')}
-                />
-              </div>
+              <AuthInput
+                id="signUpEmail"
+                name="signUpEmail"
+                type="email"
+                placeholder="이메일을 입력하세요"
+                autoComplete="email"
+                icon={ICONS.mail}
+                value={formValues.email}
+                onChange={handleChange('email')}
+              />
               <button type="button" className="auth-secondary-button" disabled>
                 인증번호 발송
               </button>
@@ -159,70 +151,45 @@ const SignUpPage = ({ onBack, onSuccess }) => {
             labelFor="signUpEmailCode"
             labelSuffix={<span className="auth-field__timer">05:00</span>}
           >
-            <div className="auth-input auth-input--with-action">
-              <div className="auth-input__left">
-                <span className="auth-input__icon">
-                  <img src={ICONS.key} alt="" aria-hidden="true" />
-                </span>
-                <input
-                  id="signUpEmailCode"
-                  name="signUpEmailCode"
-                  type="text"
-                  placeholder="인증번호 6자리"
-                  className="auth-input__control"
-                  value={formValues.emailCode}
-                  onChange={handleChange('emailCode')}
-                />
-              </div>
-              <button type="button" className="auth-chip-button">
-                확인
-              </button>
-            </div>
+            <AuthInput
+              id="signUpEmailCode"
+              name="signUpEmailCode"
+              type="text"
+              placeholder="인증번호 6자리"
+              icon={ICONS.key}
+              value={formValues.emailCode}
+              onChange={handleChange('emailCode')}
+              endSlot={
+                <button type="button" className="auth-chip-button">
+                  확인
+                </button>
+              }
+            />
           </FormField>
 
           <FormField label="휴대폰번호" labelFor="signUpPhone" labelSuffix={<RequiredMark />}>
-            <div className="auth-input">
-              <span className="auth-input__icon">
-                <img src={ICONS.phone} alt="" aria-hidden="true" />
-              </span>
-              <input
-                id="signUpPhone"
-                name="signUpPhone"
-                type="tel"
-                placeholder="휴대폰번호를 입력하세요"
-                className="auth-input__control"
-                autoComplete="tel"
-                value={formValues.phone}
-                onChange={handleChange('phone')}
-              />
-            </div>
+            <AuthInput
+              id="signUpPhone"
+              name="signUpPhone"
+              type="tel"
+              placeholder="휴대폰번호를 입력하세요"
+              autoComplete="tel"
+              icon={ICONS.phone}
+              value={formValues.phone}
+              onChange={handleChange('phone')}
+            />
           </FormField>
 
           <FormField label="비밀번호" labelFor="signUpPassword" labelSuffix={<RequiredMark />}>
-            <div className="auth-input auth-input--with-action">
-              <div className="auth-input__left">
-                <span className="auth-input__icon">
-                  <img src={ICONS.lock} alt="" aria-hidden="true" />
-                </span>
-                <input
-                  id="signUpPassword"
-                  name="signUpPassword"
-                  type="password"
-                  placeholder="비밀번호를 입력하세요"
-                  className="auth-input__control"
-                  autoComplete="new-password"
-                  value={formValues.password}
-                  onChange={handleChange('password')}
-                />
-              </div>
-              <button
-                type="button"
-                className="auth__icon-button auth__icon-button--muted"
-                aria-label="비밀번호 표시"
-              >
-                <img src={ICONS.eyeOff} alt="" aria-hidden="true" />
-              </button>
-            </div>
+            <PasswordInput
+              id="signUpPassword"
+              name="signUpPassword"
+              placeholder="비밀번호를 입력하세요"
+              autoComplete="new-password"
+              icon={ICONS.lock}
+              value={formValues.password}
+              onChange={handleChange('password')}
+            />
             <ul className="auth-password-rules">
               <PasswordRule icon={ICONS.ruleCheck} text="영문, 숫자 포함 8자 이상" success />
               <PasswordRule icon={ICONS.ruleError} text="특수문자 포함" />
@@ -234,30 +201,15 @@ const SignUpPage = ({ onBack, onSuccess }) => {
             labelFor="signUpPasswordConfirm"
             labelSuffix={<RequiredMark />}
           >
-            <div className="auth-input auth-input--with-action">
-              <div className="auth-input__left">
-                <span className="auth-input__icon">
-                  <img src={ICONS.lock} alt="" aria-hidden="true" />
-                </span>
-                <input
-                  id="signUpPasswordConfirm"
-                  name="signUpPasswordConfirm"
-                  type="password"
-                  placeholder="비밀번호를 다시 입력하세요"
-                  className="auth-input__control"
-                  autoComplete="new-password"
-                  value={formValues.passwordConfirm}
-                  onChange={handleChange('passwordConfirm')}
-                />
-              </div>
-              <button
-                type="button"
-                className="auth__icon-button auth__icon-button--muted"
-                aria-label="비밀번호 표시"
-              >
-                <img src={ICONS.eyeOff} alt="" aria-hidden="true" />
-              </button>
-            </div>
+            <PasswordInput
+              id="signUpPasswordConfirm"
+              name="signUpPasswordConfirm"
+              placeholder="비밀번호를 다시 입력하세요"
+              autoComplete="new-password"
+              icon={ICONS.lock}
+              value={formValues.passwordConfirm}
+              onChange={handleChange('passwordConfirm')}
+            />
           </FormField>
 
           {feedback && (

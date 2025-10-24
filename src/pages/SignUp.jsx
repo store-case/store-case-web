@@ -193,7 +193,7 @@ const SignUpPage = ({ onBack, onSuccess }) => {
           </FormField>
 
           <FormField label="이메일 (아이디)" labelFor="signUpEmail" labelSuffix={<RequiredMark />}>
-            <div className="auth-field__group">
+            <div className="auth-field__group auth-field__group--stacked">
               <AuthInput
                 id="signUpEmail"
                 name="signUpEmail"
@@ -206,14 +206,18 @@ const SignUpPage = ({ onBack, onSuccess }) => {
               />
               {isValidEmail ? (
                 <MyPageActionButton
-                  className="mypage-action-button--signup"
+                  className="mypage-action-button--signup mypage-action-button--block"
                   onClick={handleSendEmail}
                   disabled={sendingEmail}
                 >
                   {emailButtonLabel}
                 </MyPageActionButton>
               ) : (
-                <button type="button" className="mypage__secondary mypage__secondary--signup" disabled>
+                <button
+                  type="button"
+                  className="mypage__secondary mypage__secondary--signup mypage__secondary--block"
+                  disabled
+                >
                   인증번호 발송
                 </button>
               )}

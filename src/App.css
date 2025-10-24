@@ -181,6 +181,10 @@ body {
   gap: 8px;
 }
 
+.auth-field__group--stacked {
+  gap: 12px;
+}
+
 .auth-input {
   display: flex;
   align-items: center;
@@ -413,7 +417,6 @@ body {
 
 .mypage__secondary--signup {
   height: 40px;
-  width: 120px;
   font-size: 14px;
 }
 
@@ -466,9 +469,13 @@ body {
 
 .mypage-action-button--signup {
   height: 40px;
-  width: 120px;
   padding: 0 20px;
   font-size: 14px;
+}
+
+.mypage-action-button--block,
+.mypage__secondary--block {
+  width: 100%;
 }
 
 .auth-password-rules {

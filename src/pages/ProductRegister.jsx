@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './ProductRegister.css'
 import AuthHeader from '../components/AuthHeader'
@@ -27,6 +27,13 @@ const ProductRegisterPage = () => {
 
   const storeName = useMemo(() => user?.name || '스토어', [user?.name])
   const optionEnabled = Boolean(option)
+  const optionSectionRef = useRef(null)
+
+  useEffect(() => {
+    if (optionEnabled && optionSectionRef.current) {
+      optionSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [optionEnabled])
 
   const handleChange = (field) => (event) => {
     const { value } = event.target
@@ -290,17 +297,19 @@ const ProductRegisterPage = () => {
           </div>
         </section>
 
-        <ProductOptionManager
-          option={option}
-          onOptionChange={setOption}
-          onFeedbackChange={setFeedback}
-          onEnable={() => {
-            setFormValues((prev) => ({ ...prev, price: '' }))
-          }}
-          onDisable={() => {
-            setFormValues((prev) => ({ ...prev, price: '' }))
-          }}
-        />
+        <div ref={optionSectionRef} className="product-register__section product-register__section--divider">
+          <ProductOptionManager
+            option={option}
+            onOptionChange={setOption}
+            onFeedbackChange={setFeedback}
+            onEnable={() => {
+              setFormValues((prev) => ({ ...prev, price: '' }))
+            }}
+            onDisable={() => {
+              setFormValues((prev) => ({ ...prev, price: '' }))
+            }}
+          />
+        </div>
       </form>
 
       <footer className="product-register__footer">

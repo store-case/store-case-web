@@ -4,6 +4,7 @@ import LoginPage from './pages/Login'
 import SignUpPage from './pages/SignUp'
 import MainPage from './pages/Main'
 import ProductRegisterPage from './pages/ProductRegister'
+import MyPage from './pages/MyPage'
 import { useAuth } from './contexts/AuthContext'
 
 const App = () => {
@@ -50,6 +51,10 @@ const App = () => {
         <Route
           path="/"
           element={isAuthenticated ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/mypage"
+          element={isAuthenticated ? <MyPage /> : <Navigate to="/login" replace />}
         />
         <Route
           path="/seller/products/new"

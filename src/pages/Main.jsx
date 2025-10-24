@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import './Main.css'
 import ProductCard from '../components/ProductCard'
 
@@ -79,7 +80,9 @@ const RELATED_PRODUCTS = [
   },
 ]
 
-const MainPage = ({ onLogout: _onLogout }) => {
+const MainPage = () => {
+  const navigate = useNavigate()
+
   return (
     <div className="main-page">
       <header className="main-header">
@@ -88,7 +91,7 @@ const MainPage = ({ onLogout: _onLogout }) => {
           <span className="main-header__logo-text">K-Shop</span>
         </div>
         <div className="main-header__actions">
-          <button type="button" className="main-header__avatar">
+          <button type="button" className="main-header__avatar" onClick={() => navigate('/mypage')}>
             K
           </button>
           <button type="button" className="main-header__icon-button" aria-label="찜">

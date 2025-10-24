@@ -15,16 +15,16 @@ const parseUserProfile = (value) => {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem('accessToken') || '')
+  const [rawAccessToken, setRawAccessToken] = useState(() => localStorage.getItem('accessToken') || '')
   const [user, setUser] = useState(() => parseUserProfile(localStorage.getItem('userProfile')))
 
   useEffect(() => {
-    if (accessToken) {
-      localStorage.setItem('accessToken', accessToken)
+    if (rawAccessToken) {
+      localStorage.setItem('accessToken', rawAccessToken)
     } else {
       localStorage.removeItem('accessToken')
     }
-  }, [accessToken])
+  }, [rawAccessToken])
 
   useEffect(() => {
     if (user) {
@@ -41,24 +41,24 @@ export const AuthProvider = ({ children }) => {
 
     if (!nextAccessToken) return
 
-    setAccessToken(nextAccessToken)
+    setRawAccessToken(nextAccessToken)
     setUser(profile)
   }, [])
 
   const signOut = useCallback(() => {
-    setAccessToken('')
+    setRawAccessToken('')
     setUser(null)
   }, [])
 
   const value = useMemo(
     () => ({
-      accessToken,
+      accessToken: rawAccessToken,
       user,
-      isAuthenticated: Boolean(accessToken),
+      isAuthenticated: Boolean(rawAccessToken),
       signIn,
       signOut,
     }),
-    [accessToken, signIn, signOut, user],
+    [rawAccessToken, signIn, signOut, user],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -73,4 +73,3 @@ export const useAuth = () => {
 
   return context
 }
-

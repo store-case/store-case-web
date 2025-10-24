@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import FormField from '../components/FormField'
 import AuthHeader from '../components/AuthHeader'
 import PasswordInput from '../components/PasswordInput'
 import AuthInput from '../components/AuthInput'
+import MyPageActionButton from '../components/MyPageActionButton'
 import ICONS from '../constants/icons'
 
 const AGREEMENTS = [
@@ -37,6 +38,17 @@ const SignUpPage = ({ onBack, onSuccess }) => {
   })
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailTimer, setEmailTimer] = useState(0)
+  const [emailError, setEmailError] = useState(null)
+
+  useEffect(() => {
+    if (emailTimer <= 0) return undefined
+    const interval = setInterval(() => {
+      setEmailTimer((prev) => (prev <= 1 ? 0 : prev - 1))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [emailTimer])
 
   const handleChange = (field) => (event) => {
     const { value } = event.target
@@ -44,7 +56,16 @@ const SignUpPage = ({ onBack, onSuccess }) => {
     if (feedback) {
       setFeedback(null)
     }
+    if (field === 'email' && emailError) {
+      setEmailError(null)
+    }
   }
+
+  const isValidEmail = useMemo(() => {
+    if (!formValues.email) return false
+    const emailRegex = /^[\w.+-]+@[\w-]+\.[\w.-]+$/
+    return emailRegex.test(formValues.email)
+  }, [formValues.email])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -109,6 +130,49 @@ const SignUpPage = ({ onBack, onSuccess }) => {
     }
   }
 
+  const handleSendEmail = async () => {
+    if (!isValidEmail || sendingEmail) return
+
+    setSendingEmail(true)
+    setEmailError(null)
+
+    try {
+      const response = await fetch('http://localhost:8081/api/auth/join/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: formValues.email }),
+      })
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        const errorMessage = data?.message || '인증번호 전송에 실패했습니다.'
+        throw new Error(errorMessage)
+      }
+
+      setFeedback({ type: 'success', message: data?.message || '이메일이 전송되었습니다.' })
+      setEmailTimer(5 * 60)
+    } catch (error) {
+      setEmailError(error?.message || '인증번호 전송에 실패했습니다.')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
+  const formattedTimer = useMemo(() => {
+    const minutes = Math.floor(emailTimer / 60)
+    const seconds = emailTimer % 60
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+  }, [emailTimer])
+
+  const emailButtonLabel = useMemo(() => {
+    if (sendingEmail) return '전송 중...'
+    if (emailTimer > 0) return '재전송'
+    return '인증번호 발송'
+  }, [emailTimer, sendingEmail])
+
   return (
     <div className="auth-card auth-card--signup">
       <AuthHeader title="회원가입" onBack={onBack} />
@@ -140,16 +204,27 @@ const SignUpPage = ({ onBack, onSuccess }) => {
                 value={formValues.email}
                 onChange={handleChange('email')}
               />
-              <button type="button" className="auth-secondary-button" disabled>
-                인증번호 발송
-              </button>
+              {isValidEmail ? (
+                <MyPageActionButton
+                  className="mypage-action-button--signup"
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail}
+                >
+                  {emailButtonLabel}
+                </MyPageActionButton>
+              ) : (
+                <button type="button" className="mypage__secondary mypage__secondary--signup" disabled>
+                  인증번호 발송
+                </button>
+              )}
             </div>
+            {emailError && <p className="auth-message auth-message--error auth-message--inline">{emailError}</p>}
           </FormField>
 
           <FormField
             label="이메일 인증번호"
             labelFor="signUpEmailCode"
-            labelSuffix={<span className="auth-field__timer">05:00</span>}
+            labelSuffix={<span className="auth-field__timer">{emailTimer > 0 ? formattedTimer : '05:00'}</span>}
           >
             <AuthInput
               id="signUpEmailCode"

@@ -297,6 +297,21 @@
   color: #6b7280;
 }
 
+.product-register__option-stock-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.product-register__option-stock-input input {
+  width: 100px;
+}
+
+.product-register__option-stock-input span {
+  font-size: 14px;
+  color: #6b7280;
+}
+
 .product-register__option-add {
   height: 36px;
   padding: 0 16px;

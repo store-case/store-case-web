@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './ProductRegister.css'
-import AuthHeader from '../components/AuthHeader'
+import PageHeader from '../components/PageHeader'
 import ImageUploader, { createImageItem, revokePreview } from '../components/ImageUploader'
 import ProductOptionManager from '../components/ProductOptionManager'
+import FeedbackMessage from '../components/FeedbackMessage'
 import ICONS from '../constants/icons'
+import { API_ENDPOINTS } from '../constants/api'
 import { useAuth } from '../contexts/AuthContext'
+import useFormValidation from '../hooks/useFormValidation'
+import { apiClient } from '../utils/apiClient'
 
 const CATEGORY_PRESETS = ['신발', '전자기기', '가방', '패션', '스포츠', '가전', '뷰티']
 
@@ -13,6 +17,7 @@ const DEFAULT_FORM = {
   name: '',
   description: '',
   price: '',
+  stock: '',
   category: '',
 }
 
@@ -28,6 +33,41 @@ const ProductRegisterPage = () => {
   const storeName = useMemo(() => user?.name || '스토어', [user?.name])
   const optionEnabled = Boolean(option)
   const optionSectionRef = useRef(null)
+  const productValidators = useMemo(
+    () => ({
+      name: (value) => (!value ? '상품명을 입력해주세요.' : null),
+      description: (value) => (!value ? '상품 설명을 입력해주세요.' : null),
+      category: (value) => (!value ? '카테고리를 선택해주세요.' : null),
+      price: (value, values) => {
+        if (values?.hasOption) {
+          return null
+        }
+        if (value === '' || value === null || value === undefined) {
+          return '판매가를 입력해주세요.'
+        }
+        const numeric = Number(value)
+        if (Number.isNaN(numeric) || numeric < 0) {
+          return '판매가는 0 이상 숫자로 입력해주세요.'
+        }
+        return null
+      },
+      stock: (value, values) => {
+        if (values?.hasOption) {
+          return null
+        }
+        if (value === '' || value === null || value === undefined) {
+          return '재고수를 입력해주세요.'
+        }
+        const numeric = Number(value)
+        if (Number.isNaN(numeric) || numeric < 0 || !Number.isInteger(numeric)) {
+          return '재고수는 0 이상 정수로 입력해주세요.'
+        }
+        return null
+      },
+    }),
+    [],
+  )
+  const { clearError, validateAll, resetErrors } = useFormValidation(productValidators)
 
   useEffect(() => {
     if (optionEnabled && optionSectionRef.current) {
@@ -38,6 +78,7 @@ const ProductRegisterPage = () => {
   const handleChange = (field) => (event) => {
     const { value } = event.target
     setFormValues((prev) => ({ ...prev, [field]: value }))
+    clearError(field)
     if (feedback) {
       setFeedback(null)
     }
@@ -45,6 +86,7 @@ const ProductRegisterPage = () => {
 
   const handleCategoryToggle = (value) => {
     setFormValues((prev) => ({ ...prev, category: prev.category === value ? '' : value }))
+    clearError('category')
     if (feedback) {
       setFeedback(null)
     }
@@ -56,6 +98,7 @@ const ProductRegisterPage = () => {
     setOption(null)
     imageInputs.forEach((input) => revokePreview(input.preview))
     setImageInputs([createImageItem()])
+    resetErrors()
   }
 
   const handleSubmit = async (event) => {
@@ -63,25 +106,18 @@ const ProductRegisterPage = () => {
     if (submitting) return
 
     const hasOption = Boolean(option)
-
-    if (!formValues.name || !formValues.description || !formValues.category) {
+    const { isValid, firstError } = validateAll({ ...formValues, hasOption })
+    if (!isValid) {
       setFeedback({
         type: 'error',
-        message: '필수 입력값을 모두 채워주세요.',
-      })
-      return
-    }
-
-    if (!hasOption && !formValues.price) {
-      setFeedback({
-        type: 'error',
-        message: '판매가를 입력해주세요.',
+        message: firstError,
       })
       return
     }
 
     let formattedOption = null
     let productPrice = 0
+    let productStock = 0
 
     if (hasOption) {
       const trimmedName = option.name.trim()
@@ -102,15 +138,24 @@ const ProductRegisterPage = () => {
       }
 
       const normalizedValues = option.values
-        .map(({ label, price }) => {
+        .map(({ label, price, stock }) => {
           const trimmedLabel = label.trim()
           const numericPrice = Number(price)
-          if (!trimmedLabel || Number.isNaN(numericPrice)) {
+          const numericStock = Number(stock)
+          if (
+            !trimmedLabel ||
+            Number.isNaN(numericPrice) ||
+            Number.isNaN(numericStock) ||
+            numericPrice < 0 ||
+            numericStock < 0 ||
+            !Number.isInteger(numericStock)
+          ) {
             return null
           }
           return {
             label: trimmedLabel,
             price: numericPrice,
+            stock: numericStock,
           }
         })
         .filter(Boolean)
@@ -128,24 +173,8 @@ const ProductRegisterPage = () => {
         values: normalizedValues,
       }
     } else {
-      const parsedPrice = Number(formValues.price)
-      if (Number.isNaN(parsedPrice)) {
-        setFeedback({
-          type: 'error',
-          message: '판매가는 숫자로 입력해주세요.',
-        })
-        return
-      }
-
-      if (parsedPrice < 0) {
-        setFeedback({
-          type: 'error',
-          message: '판매가는 0 이상이어야 합니다.',
-        })
-        return
-      }
-
-      productPrice = parsedPrice
+      productPrice = Number(formValues.price)
+      productStock = Number(formValues.stock)
     }
 
     const requestBody = {
@@ -153,7 +182,7 @@ const ProductRegisterPage = () => {
       summary: '',
       category: formValues.category,
       price: hasOption ? 0 : productPrice,
-      stock: 0,
+      stock: hasOption ? 0 : productStock,
       shippingFee: 0,
       status: 'ACTIVE',
       tags: [],
@@ -167,27 +196,9 @@ const ProductRegisterPage = () => {
     setFeedback(null)
 
     try {
-      const headers = {
-        'Content-Type': 'application/json',
-      }
-
-      if (accessToken) {
-        headers.Authorization = accessToken
-      }
-
-      const response = await fetch('http://localhost:8081/api/seller/products', {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify(requestBody),
+      const data = await apiClient.post(API_ENDPOINTS.seller.createProduct, requestBody, {
+        token: accessToken,
       })
-
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        const errorMessage = data?.message || '상품 등록에 실패했습니다.'
-        throw new Error(errorMessage)
-      }
 
       setFeedback({
         type: 'success',
@@ -209,22 +220,11 @@ const ProductRegisterPage = () => {
 
   return (
     <div className="auth-card auth-card--product" aria-labelledby="product-register-title">
-      <AuthHeader title="상품 등록" titleId="product-register-title" onBack={() => navigate(-1)} />
+      <PageHeader title="상품 등록" titleId="product-register-title" onBack={() => navigate(-1)} />
 
       <form id="product-register-form" className="product-register" onSubmit={handleSubmit}>
         <p className="product-register__intro">{storeName}님의 새로운 상품을 소개해주세요.</p>
-        {feedback && (
-          <p
-            className={
-              feedback.type === 'success'
-                ? 'product-register__feedback product-register__feedback--success'
-                : 'product-register__feedback product-register__feedback--error'
-            }
-            role={feedback.type === 'success' ? 'status' : 'alert'}
-          >
-            {feedback.message}
-          </p>
-        )}
+        <FeedbackMessage type={feedback?.type} message={feedback?.message} variant="product" />
 
         <ImageUploader images={imageInputs} onChange={setImageInputs} maxImages={5} />
 
@@ -279,6 +279,27 @@ const ProductRegisterPage = () => {
         </section>
 
         <section className="product-register__section">
+          <label className="product-register__label" htmlFor="productStock">
+            재고수<span className="product-register__badge">*</span>
+          </label>
+          <div className="product-register__input-group">
+            <input
+              id="productStock"
+              name="productStock"
+              type="number"
+              min="0"
+              className="product-register__control"
+              placeholder="0"
+              value={formValues.stock}
+              onChange={handleChange('stock')}
+              disabled={optionEnabled}
+            />
+            <span className="product-register__input-suffix">개</span>
+          </div>
+          {optionEnabled && <p className="product-register__helper">옵션별 재고로 관리할 수 있어요.</p>}
+        </section>
+
+        <section className="product-register__section">
           <span className="product-register__label">
             카테고리<span className="product-register__badge">*</span>
           </span>
@@ -297,16 +318,20 @@ const ProductRegisterPage = () => {
           </div>
         </section>
 
-        <div ref={optionSectionRef} className="product-register__section product-register__section--divider">
+        <div ref={optionSectionRef}>
           <ProductOptionManager
             option={option}
             onOptionChange={setOption}
             onFeedbackChange={setFeedback}
             onEnable={() => {
-              setFormValues((prev) => ({ ...prev, price: '' }))
+              setFormValues((prev) => ({ ...prev, price: '', stock: '' }))
+              clearError('price')
+              clearError('stock')
             }}
             onDisable={() => {
-              setFormValues((prev) => ({ ...prev, price: '' }))
+              setFormValues((prev) => ({ ...prev, price: '', stock: '' }))
+              clearError('price')
+              clearError('stock')
             }}
           />
         </div>

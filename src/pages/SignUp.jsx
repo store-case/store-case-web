@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import FormField from '../components/FormField'
-import AuthHeader from '../components/AuthHeader'
+import PageHeader from '../components/PageHeader'
 import PasswordInput from '../components/PasswordInput'
-import AuthInput from '../components/AuthInput'
-import MyPageActionButton from '../components/MyPageActionButton'
+import FormInput from '../components/FormInput'
+import ActionButton from '../components/ActionButton'
+import FeedbackMessage from '../components/FeedbackMessage'
+import AgreementCheckbox from '../components/AgreementCheckbox'
 import ICONS from '../constants/icons'
+import { API_ENDPOINTS } from '../constants/api'
+import useFormValidation from '../hooks/useFormValidation'
+import { apiClient } from '../utils/apiClient'
 
 const AGREEMENTS = [
   {
@@ -41,6 +46,30 @@ const SignUpPage = ({ onBack, onSuccess }) => {
   const [sendingEmail, setSendingEmail] = useState(false)
   const [emailTimer, setEmailTimer] = useState(0)
   const [emailError, setEmailError] = useState(null)
+  const [emailVerification, setEmailVerification] = useState(null)
+  const [verifyingEmailCode, setVerifyingEmailCode] = useState(false)
+  const validators = useMemo(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return {
+      name: (value) => (!value ? '이름을 입력해주세요.' : null),
+      email: (value) => {
+        if (!value) return '이메일을 입력해주세요.'
+        return emailRegex.test(value) ? null : '유효한 이메일을 입력해주세요.'
+      },
+      phone: (value) => (!value ? '휴대폰번호를 입력해주세요.' : null),
+      password: (value) => {
+        if (!value) return '비밀번호를 입력해주세요.'
+        if (value.length < 8) return '비밀번호는 8자 이상 입력해주세요.'
+        return null
+      },
+      passwordConfirm: (value, values) => {
+        if (!value) return '비밀번호 확인을 입력해주세요.'
+        if (value !== values.password) return '비밀번호가 일치하지 않습니다.'
+        return null
+      },
+    }
+  }, [])
+  const { clearError, validateAll, resetErrors } = useFormValidation(validators)
 
   useEffect(() => {
     if (emailTimer <= 0) return undefined
@@ -53,31 +82,27 @@ const SignUpPage = ({ onBack, onSuccess }) => {
   const handleChange = (field) => (event) => {
     const { value } = event.target
     setFormValues((prev) => ({ ...prev, [field]: value }))
+    clearError(field)
     if (feedback) {
       setFeedback(null)
     }
     if (field === 'email' && emailError) {
       setEmailError(null)
     }
+    if (field === 'emailCode' && emailVerification) {
+      setEmailVerification(null)
+    }
   }
 
-  const isValidEmail = useMemo(() => {
-    if (!formValues.email) return false
-    const emailRegex = /^[\w.+-]+@[\w-]+\.[\w.-]+$/
-    return emailRegex.test(formValues.email)
-  }, [formValues.email])
+  const isValidEmail = useMemo(() => !validators.email(formValues.email), [formValues.email, validators])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (submitting) return
 
-    if (!formValues.name || !formValues.email || !formValues.phone || !formValues.password) {
-      setFeedback({ type: 'error', message: '모든 필드를 입력해주세요.' })
-      return
-    }
-
-    if (formValues.password !== formValues.passwordConfirm) {
-      setFeedback({ type: 'error', message: '비밀번호가 일치하지 않습니다.' })
+    const { isValid, firstError } = validateAll(formValues)
+    if (!isValid) {
+      setFeedback({ type: 'error', message: firstError })
       return
     }
 
@@ -85,25 +110,12 @@ const SignUpPage = ({ onBack, onSuccess }) => {
     setFeedback(null)
 
     try {
-      const response = await fetch('http://localhost:8081/api/auth/join', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formValues.email,
-          password: formValues.password,
-          name: formValues.name,
-          phone: formValues.phone,
-        }),
+      const data = await apiClient.post(API_ENDPOINTS.auth.join, {
+        email: formValues.email,
+        password: formValues.password,
+        name: formValues.name,
+        phone: formValues.phone,
       })
-
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        const errorMessage = data?.message || '회원가입에 실패했습니다.'
-        throw new Error(errorMessage)
-      }
 
       setFeedback({
         type: 'success',
@@ -117,6 +129,7 @@ const SignUpPage = ({ onBack, onSuccess }) => {
         password: '',
         passwordConfirm: '',
       })
+      resetErrors()
       setTimeout(() => {
         onSuccess?.()
       }, 800)
@@ -135,29 +148,57 @@ const SignUpPage = ({ onBack, onSuccess }) => {
 
     setSendingEmail(true)
     setEmailError(null)
+    setEmailVerification(null)
 
     try {
-      const response = await fetch('http://localhost:8081/api/auth/join/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: formValues.email }),
-      })
-
-      const data = await response.json().catch(() => null)
-
-      if (!response.ok) {
-        const errorMessage = data?.message || '인증번호 전송에 실패했습니다.'
-        throw new Error(errorMessage)
-      }
+      const data = await apiClient.post(API_ENDPOINTS.auth.joinEmail, { email: formValues.email }, { skipAuth: true })
 
       setFeedback({ type: 'success', message: data?.message || '이메일이 전송되었습니다.' })
       setEmailTimer(5 * 60)
     } catch (error) {
-      setEmailError(error?.message || '인증번호 전송에 실패했습니다.')
+      if (error?.status === 409) {
+        setEmailVerification({ type: 'success', message: error?.message || '이미 인증된 이메일입니다.' })
+        setFeedback(null)
+      } else {
+        setEmailError(error?.message || '인증번호 전송에 실패했습니다.')
+      }
     } finally {
       setSendingEmail(false)
+    }
+  }
+
+  const handleVerifyEmailCode = async () => {
+    if (!formValues.email || !formValues.emailCode) {
+      setEmailVerification({ type: 'error', message: '이메일과 인증번호를 입력해주세요.' })
+      return
+    }
+
+    setVerifyingEmailCode(true)
+    setEmailVerification(null)
+
+    try {
+      const data = await apiClient.post(
+        API_ENDPOINTS.auth.joinEmailVerify,
+        { email: formValues.email, code: formValues.emailCode },
+        { skipAuth: true },
+      )
+
+      const status = data?.data?.status
+      if (status === 'VERIFIED') {
+        setEmailVerification({ type: 'success', message: data?.message || '이메일 인증이 완료되었습니다.' })
+      } else {
+        setEmailVerification({ type: 'error', message: data?.message || '인증번호가 일치하지 않습니다.' })
+      }
+    } catch (error) {
+      const message = error?.message || '인증번호 확인에 실패했습니다.'
+      if (error?.status === 410) {
+        setEmailVerification({ type: 'error', message })
+        setEmailTimer(0)
+      } else {
+        setEmailVerification({ type: 'error', message })
+      }
+    } finally {
+      setVerifyingEmailCode(false)
     }
   }
 
@@ -168,19 +209,22 @@ const SignUpPage = ({ onBack, onSuccess }) => {
   }, [emailTimer])
 
   const emailButtonLabel = useMemo(() => {
+    if (emailVerification?.type === 'success') {
+      return '인증 완료'
+    }
     if (sendingEmail) return '전송 중...'
     if (emailTimer > 0) return '재전송'
     return '인증번호 발송'
-  }, [emailTimer, sendingEmail])
+  }, [emailTimer, sendingEmail, emailVerification?.type])
 
   return (
     <div className="auth-card auth-card--signup">
-      <AuthHeader title="회원가입" onBack={onBack} />
+      <PageHeader title="회원가입" onBack={onBack} />
 
       <main className="auth__content auth__content--signup">
         <form className="auth-form auth-form--signup" onSubmit={handleSubmit}>
           <FormField label="이름" labelFor="signUpName" labelSuffix={<RequiredMark />}>
-            <AuthInput
+            <FormInput
               id="signUpName"
               name="signUpName"
               type="text"
@@ -194,7 +238,7 @@ const SignUpPage = ({ onBack, onSuccess }) => {
 
           <FormField label="이메일 (아이디)" labelFor="signUpEmail" labelSuffix={<RequiredMark />}>
             <div className="auth-field__group auth-field__group--stacked">
-              <AuthInput
+              <FormInput
                 id="signUpEmail"
                 name="signUpEmail"
                 type="email"
@@ -205,13 +249,13 @@ const SignUpPage = ({ onBack, onSuccess }) => {
                 onChange={handleChange('email')}
               />
               {isValidEmail ? (
-                <MyPageActionButton
+                <ActionButton
                   className="mypage-action-button--signup mypage-action-button--block"
                   onClick={handleSendEmail}
-                  disabled={sendingEmail}
+                  disabled={sendingEmail || emailVerification?.type === 'success'}
                 >
                   {emailButtonLabel}
-                </MyPageActionButton>
+                </ActionButton>
               ) : (
                 <button
                   type="button"
@@ -230,7 +274,7 @@ const SignUpPage = ({ onBack, onSuccess }) => {
             labelFor="signUpEmailCode"
             labelSuffix={<span className="auth-field__timer">{emailTimer > 0 ? formattedTimer : '05:00'}</span>}
           >
-            <AuthInput
+            <FormInput
               id="signUpEmailCode"
               name="signUpEmailCode"
               type="text"
@@ -239,15 +283,32 @@ const SignUpPage = ({ onBack, onSuccess }) => {
               value={formValues.emailCode}
               onChange={handleChange('emailCode')}
               endSlot={
-                <button type="button" className="auth-chip-button">
-                  확인
+                <button
+                  type="button"
+                  className="auth-chip-button"
+                  onClick={handleVerifyEmailCode}
+                  disabled={verifyingEmailCode}
+                >
+                  {verifyingEmailCode ? '확인 중...' : '확인'}
                 </button>
               }
             />
+            {emailVerification && (
+              <p
+                className={
+                  emailVerification.type === 'success'
+                    ? 'auth-message auth-message--success auth-message--inline'
+                    : 'auth-message auth-message--error auth-message--inline'
+                }
+                role={emailVerification.type === 'success' ? 'status' : 'alert'}
+              >
+                {emailVerification.message}
+              </p>
+            )}
           </FormField>
 
           <FormField label="휴대폰번호" labelFor="signUpPhone" labelSuffix={<RequiredMark />}>
-            <AuthInput
+            <FormInput
               id="signUpPhone"
               name="signUpPhone"
               type="tel"
@@ -291,54 +352,20 @@ const SignUpPage = ({ onBack, onSuccess }) => {
             />
           </FormField>
 
-          {feedback && (
-            <p
-              className={
-                feedback.type === 'success'
-                  ? 'auth-message auth-message--success'
-                  : 'auth-message auth-message--error'
-              }
-              role={feedback.type === 'success' ? 'status' : 'alert'}
-            >
-              {feedback.message}
-            </p>
-          )}
+          <FeedbackMessage type={feedback?.type} message={feedback?.message} />
 
           <section className="auth-agreements" aria-label="약관 동의">
-            <label className="auth-checkbox auth-checkbox--card">
-              <input type="checkbox" defaultChecked className="auth-checkbox__input" />
-              <span className="auth-checkbox__box" aria-hidden="true">
-                <img src={ICONS.checklist} alt="" aria-hidden="true" />
-              </span>
-              <span className="auth-checkbox__content">전체 약관에 동의합니다</span>
-            </label>
+            <AgreementCheckbox id="agreement-all" label="전체 약관에 동의합니다" defaultChecked variant="card" />
 
             <div className="auth-agreements__list">
               {AGREEMENTS.map((agreement) => (
                 <div className="auth-agreement" key={agreement.id}>
-                  <label className="auth-checkbox auth-checkbox--inline" htmlFor={agreement.id}>
-                    <input
-                      id={agreement.id}
-                      type="checkbox"
-                      className="auth-checkbox__input"
-                      defaultChecked={agreement.defaultChecked}
-                    />
-                    <span className="auth-checkbox__box" aria-hidden="true">
-                      <img src={ICONS.checklist} alt="" aria-hidden="true" />
-                    </span>
-                    <span className="auth-checkbox__content">
-                      {agreement.label}
-                      <span
-                        className={
-                          agreement.required
-                            ? 'auth-agreement__badge auth-agreement__badge--required'
-                            : 'auth-agreement__badge'
-                        }
-                      >
-                        {agreement.required ? '(필수)' : '(선택)'}
-                      </span>
-                    </span>
-                  </label>
+                  <AgreementCheckbox
+                    id={agreement.id}
+                    label={agreement.label}
+                    defaultChecked={agreement.defaultChecked}
+                    required={agreement.required}
+                  />
                   <button
                     type="button"
                     className="auth__icon-button auth__icon-button--small"

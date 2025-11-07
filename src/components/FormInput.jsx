@@ -1,6 +1,6 @@
 import { forwardRef } from 'react'
 
-const AuthInput = forwardRef(
+const FormInput = forwardRef(
   ({ icon, iconAlt = '', endSlot, className = '', inputClassName = '', ...inputProps }, ref) => {
     const iconElement = icon ? (
       <span className="auth-input__icon">
@@ -29,6 +29,6 @@ const AuthInput = forwardRef(
   },
 )
 
-AuthInput.displayName = 'AuthInput'
+FormInput.displayName = 'FormInput'
 
-export default AuthInput
+export default FormInput

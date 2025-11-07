@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import './MyPage.css'
 import ICONS from '../constants/icons'
 import { useAuth } from '../contexts/AuthContext'
-import AuthHeader from '../components/AuthHeader'
-import MyPageActionButton from '../components/MyPageActionButton'
+import PageHeader from '../components/PageHeader'
+import ActionButton from '../components/ActionButton'
 
 const STATS_KEYS = [
   { key: 'orders', label: '주문 내역' },
@@ -107,7 +107,7 @@ const MyPage = () => {
 
   return (
     <div className="auth-card auth-card--mypage">
-      <AuthHeader title="마이페이지" onBack={() => navigate(-1)} />
+      <PageHeader title="마이페이지" onBack={() => navigate(-1)} />
       <main className="auth__content mypage">
         <section className="mypage__profile-card">
         <div className="mypage__profile">
@@ -123,7 +123,7 @@ const MyPage = () => {
           <button type="button" className="mypage__secondary">
             프로필 수정
           </button>
-          <MyPageActionButton onClick={handleLogout}>로그아웃</MyPageActionButton>
+          <ActionButton onClick={handleLogout}>로그아웃</ActionButton>
         </div>
       </section>
 
@@ -170,13 +170,13 @@ const MyPage = () => {
                 <p className="mypage__store-card-title">{title}</p>
                 <p className="mypage__store-card-description">{description}</p>
               </div>
-              <MyPageActionButton
+              <ActionButton
                 className="mypage-action-button--compact"
                 icon={ICONS.chevronRight}
                 onClick={() => navigate('#' + key)}
               >
                 {action}
-              </MyPageActionButton>
+              </ActionButton>
             </article>
           ))}
         </div>

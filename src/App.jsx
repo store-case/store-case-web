@@ -6,6 +6,7 @@ import MainPage from './pages/Main'
 import ProductRegisterPage from './pages/ProductRegister'
 import MyPage from './pages/MyPage'
 import { useAuth } from './contexts/AuthContext'
+import ScrollToTop from './components/ScrollToTop'
 
 const App = () => {
   const navigate = useNavigate()
@@ -23,6 +24,7 @@ const App = () => {
 
   return (
     <div className="app-root">
+      <ScrollToTop />
       <Routes>
         <Route
           path="/login"

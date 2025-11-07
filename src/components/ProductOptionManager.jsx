@@ -4,13 +4,15 @@ const createEmptyOption = () => ({
   name: '',
   valueInput: '',
   valuePriceInput: '',
+  valueStockInput: '',
   values: [],
 })
 
-const createOptionValue = (label, price) => ({
+const createOptionValue = (label, price, stock) => ({
   id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
   label,
   price,
+  stock,
 })
 
 const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnable, onDisable }) => {
@@ -62,6 +64,12 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
     updateOption((prev) => ({ ...prev, valuePriceInput: value }))
   }
 
+  const handleOptionValueStockChange = (event) => {
+    const { value } = event.target
+    clearFeedback()
+    updateOption((prev) => ({ ...prev, valueStockInput: value }))
+  }
+
   const handleAddOptionValue = () => {
     if (!optionEnabled || !option) {
       return
@@ -69,16 +77,18 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
 
     const trimmedLabel = option.valueInput.trim()
     const trimmedPrice = option.valuePriceInput.trim()
+    const trimmedStock = option.valueStockInput.trim()
 
-    if (!trimmedLabel || !trimmedPrice) {
+    if (!trimmedLabel || !trimmedPrice || !trimmedStock) {
       onFeedbackChange?.({
         type: 'error',
-        message: '옵션 값과 가격을 모두 입력해주세요.',
+        message: '옵션 값, 가격, 재고를 모두 입력해주세요.',
       })
       return
     }
 
     const numericPrice = Number(trimmedPrice)
+    const numericStock = Number(trimmedStock)
 
     if (Number.isNaN(numericPrice)) {
       onFeedbackChange?.({
@@ -96,12 +106,29 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
       return
     }
 
+    if (Number.isNaN(numericStock)) {
+      onFeedbackChange?.({
+        type: 'error',
+        message: '옵션 재고는 숫자로 입력해주세요.',
+      })
+      return
+    }
+
+    if (numericStock < 0 || !Number.isInteger(numericStock)) {
+      onFeedbackChange?.({
+        type: 'error',
+        message: '옵션 재고는 0 이상 정수로 입력해주세요.',
+      })
+      return
+    }
+
     if (option.values.some((item) => item.label === trimmedLabel)) {
       clearFeedback()
       updateOption((prev) => ({
         ...prev,
         valueInput: '',
         valuePriceInput: '',
+        valueStockInput: '',
       }))
       return
     }
@@ -109,9 +136,10 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
     clearFeedback()
     updateOption((prev) => ({
       ...prev,
-      values: [...prev.values, createOptionValue(trimmedLabel, numericPrice)],
+      values: [...prev.values, createOptionValue(trimmedLabel, numericPrice, numericStock)],
       valueInput: '',
       valuePriceInput: '',
+      valueStockInput: '',
     }))
   }
 
@@ -123,6 +151,13 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
   }
 
   const handleOptionValueLabelKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleAddOptionValue()
+    }
+  }
+
+  const handleOptionValueStockKeyDown = (event) => {
     if (event.key === 'Enter') {
       event.preventDefault()
       handleAddOptionValue()
@@ -178,9 +213,9 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
               옵션 값<span className="product-register__badge">*</span>
             </label>
             <div className="product-register__chip-list">
-              {option.values.map(({ id, label, price }) => (
+              {option.values.map(({ id, label, price, stock }) => (
                 <span className="product-register__chip" key={id}>
-                  {label} / {Number(price).toLocaleString()}원
+                  {label} / {Number(price).toLocaleString()}원 / 재고 {Number(stock).toLocaleString()}개
                   <button
                     type="button"
                     className="product-register__chip-remove"
@@ -214,11 +249,23 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
                 />
                 <span>원</span>
               </div>
+              <div className="product-register__option-stock-input">
+                <input
+                  type="number"
+                  min="0"
+                  className="product-register__control"
+                  placeholder="0"
+                  value={option.valueStockInput}
+                  onChange={handleOptionValueStockChange}
+                  onKeyDown={handleOptionValueStockKeyDown}
+                />
+                <span>개</span>
+              </div>
               <button type="button" className="product-register__option-add" onClick={handleAddOptionValue}>
                 추가
               </button>
             </div>
-            <p className="product-register__helper">옵션 값과 가격을 입력한 후 추가 버튼을 눌러주세요.</p>
+            <p className="product-register__helper">옵션 값, 가격, 재고를 입력한 후 추가 버튼을 눌러주세요.</p>
           </div>
         </div>
       )}

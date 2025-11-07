@@ -1,4 +1,4 @@
-const MyPageActionButton = ({ children, icon, onClick, type = 'button', className = '', disabled = false }) => {
+const ActionButton = ({ children, icon, onClick, type = 'button', className = '', disabled = false }) => {
   const buttonClassName = ['mypage-action-button', className, disabled ? 'mypage-action-button--disabled' : '']
     .filter(Boolean)
     .join(' ')
@@ -11,4 +11,4 @@ const MyPageActionButton = ({ children, icon, onClick, type = 'button', classNam
   )
 }
 
-export default MyPageActionButton
+export default ActionButton

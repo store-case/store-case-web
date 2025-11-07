@@ -1,6 +1,6 @@
 import ICONS from '../constants/icons'
 
-const AuthHeader = ({ title, titleId, onBack, rightSlot }) => (
+const PageHeader = ({ title, titleId, onBack, rightSlot }) => (
   <header className="auth__header">
     {onBack ? (
       <button type="button" className="auth__icon-button" aria-label="뒤로 가기" onClick={onBack}>
@@ -16,4 +16,4 @@ const AuthHeader = ({ title, titleId, onBack, rightSlot }) => (
   </header>
 )
 
-export default AuthHeader
+export default PageHeader

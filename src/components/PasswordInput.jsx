@@ -1,5 +1,5 @@
 import { forwardRef, useState } from 'react'
-import AuthInput from './AuthInput'
+import FormInput from './FormInput'
 import ICONS from '../constants/icons'
 
 const PasswordInput = forwardRef((props, ref) => {
@@ -28,7 +28,7 @@ const PasswordInput = forwardRef((props, ref) => {
   const toggleIcon = isVisible && ICONS.eye ? ICONS.eye : ICONS.eyeOff
 
   return (
-    <AuthInput
+    <FormInput
       ref={ref}
       type={isVisible ? 'text' : 'password'}
       icon={icon}

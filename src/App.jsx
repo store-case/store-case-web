@@ -1,59 +1,81 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import './App.css'
 import LoginPage from './pages/Login'
 import SignUpPage from './pages/SignUp'
 import MainPage from './pages/Main'
-
-const VIEWS = {
-  LOGIN: 'login',
-  SIGNUP: 'signup',
-}
+import ProductRegisterPage from './pages/ProductRegister'
+import MyPage from './pages/MyPage'
+import { useAuth } from './contexts/AuthContext'
+import ScrollToTop from './components/ScrollToTop'
 
 const App = () => {
-  const [view, setView] = useState(VIEWS.LOGIN)
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem('accessToken') || '')
+  const navigate = useNavigate()
+  const { isAuthenticated, signIn, signOut, user } = useAuth()
 
-  useEffect(() => {
-    if (accessToken) {
-      localStorage.setItem('accessToken', accessToken)
-    } else {
-      localStorage.removeItem('accessToken')
-    }
-  }, [accessToken])
-
-  const isAuthenticated = useMemo(() => Boolean(accessToken), [accessToken])
-
-  const handleLoginSuccess = (token) => {
-    if (token) {
-      setAccessToken(token)
-      setView(VIEWS.MAIN)
-    }
+  const handleLoginSuccess = (payload) => {
+    signIn(payload)
+    navigate('/', { replace: true })
   }
 
   const handleLogout = () => {
-    setAccessToken('')
-    setView(VIEWS.LOGIN)
+    signOut()
+    navigate('/login', { replace: true })
   }
 
-  const renderView = () => {
-    if (!isAuthenticated) {
-      if (view === VIEWS.SIGNUP) {
-        return <SignUpPage onBack={() => setView(VIEWS.LOGIN)} onSuccess={() => setView(VIEWS.LOGIN)} />
-      }
-
-      return (
-        <LoginPage
-          onBack={() => setView(VIEWS.LOGIN)}
-          onGoSignUp={() => setView(VIEWS.SIGNUP)}
-          onSuccess={handleLoginSuccess}
+  return (
+    <div className="app-root">
+      <ScrollToTop />
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/" replace />
+            ) : (
+              <LoginPage
+                onBack={() => navigate(-1)}
+                onGoSignUp={() => navigate('/join')}
+                onSuccess={handleLoginSuccess}
+              />
+            )
+          }
         />
-      )
-    }
-
-    return <MainPage onLogout={handleLogout} />
-  }
-
-  return <div className="app-root">{renderView()}</div>
+        <Route
+          path="/join"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/" replace />
+            ) : (
+              <SignUpPage onBack={() => navigate(-1)} onSuccess={() => navigate('/login', { replace: true })} />
+            )
+          }
+        />
+        <Route
+          path="/"
+          element={isAuthenticated ? <MainPage onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/mypage"
+          element={isAuthenticated ? <MyPage /> : <Navigate to="/login" replace />}
+        />
+        <Route
+          path="/seller/products/new"
+          element={
+            isAuthenticated ? (
+              user?.role === 'STORE' ? (
+                <ProductRegisterPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/login'} replace />} />
+      </Routes>
+    </div>
+  )
 }
 
 export default App

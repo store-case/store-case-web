@@ -1,6 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import FormField from '../components/FormField'
+import FormInput from '../components/FormInput'
+import PageHeader from '../components/PageHeader'
+import PasswordInput from '../components/PasswordInput'
+import FeedbackMessage from '../components/FeedbackMessage'
+import SocialLoginButtons from '../components/SocialLoginButtons'
 import ICONS from '../constants/icons'
+import { API_ENDPOINTS } from '../constants/api'
+import useFormValidation from '../hooks/useFormValidation'
+import { apiClient } from '../utils/apiClient'
 
 const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
   const [formValues, setFormValues] = useState({
@@ -9,10 +17,23 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
   })
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const validators = useMemo(
+    () => ({
+      email: (value) => {
+        if (!value) return '이메일을 입력해주세요.'
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        return emailPattern.test(value) ? null : '유효한 이메일을 입력해주세요.'
+      },
+      password: (value) => (!value ? '비밀번호를 입력해주세요.' : null),
+    }),
+    [],
+  )
+  const { clearError, validateAll, resetErrors } = useFormValidation(validators)
 
   const handleChange = (field) => (event) => {
     const { value } = event.target
     setFormValues((prev) => ({ ...prev, [field]: value }))
+    clearError(field)
     if (feedback) {
       setFeedback(null)
     }
@@ -22,8 +43,9 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
     event.preventDefault()
     if (submitting) return
 
-    if (!formValues.email || !formValues.password) {
-      setFeedback({ type: 'error', message: '이메일과 비밀번호를 입력해주세요.' })
+    const { isValid, firstError } = validateAll(formValues)
+    if (!isValid) {
+      setFeedback({ type: 'error', message: firstError })
       return
     }
 
@@ -31,37 +53,27 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
     setFeedback(null)
 
     try {
-      const response = await fetch('http://localhost:8081/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const data = await apiClient.post(API_ENDPOINTS.auth.login, formValues, {
         credentials: 'include',
-        body: JSON.stringify({
-          email: formValues.email,
-          password: formValues.password,
-        }),
+        skipAuth: true,
       })
 
-      const data = await response.json().catch(() => null)
+      const payload = data?.data
 
-      if (!response.ok) {
-        const errorMessage = data?.message || '로그인에 실패했습니다.'
-        throw new Error(errorMessage)
+      if (payload?.accessToken) {
+        onSuccess?.(payload)
+        return
       }
 
-      if (data?.data) {
-        onSuccess?.(data.data)
-      } else {
-        setFeedback({
-          type: 'success',
-          message: data?.message || '로그인에 성공했습니다.',
-        })
-        setFormValues({
-          email: '',
-          password: '',
-        })
-      }
+      setFeedback({
+        type: 'success',
+        message: data?.message || '로그인에 성공했습니다.',
+      })
+      setFormValues({
+        email: '',
+        password: '',
+      })
+      resetErrors()
     } catch (error) {
       setFeedback({
         type: 'error',
@@ -74,13 +86,7 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
 
   return (
     <div className="auth-card auth-card--login">
-      <header className="auth__header">
-        <button type="button" className="auth__icon-button" aria-label="뒤로 가기" onClick={onBack}>
-          <img src={ICONS.arrowLeft} alt="" aria-hidden="true" />
-        </button>
-        <h1 className="auth__title">로그인</h1>
-        <span aria-hidden="true" className="auth__icon-placeholder" />
-      </header>
+      <PageHeader title="로그인" onBack={onBack} />
 
       <main className="auth__content auth__content--login">
         <section className="auth-brand" aria-labelledby="brand-title">
@@ -97,48 +103,28 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <FormField label="이메일" labelFor="loginEmail">
-            <div className="auth-input">
-              <span className="auth-input__icon">
-                <img src={ICONS.mail} alt="" aria-hidden="true" />
-              </span>
-              <input
-                id="loginEmail"
-                name="loginEmail"
-                type="email"
-                placeholder="이메일을 입력하세요"
-                className="auth-input__control"
-                autoComplete="username"
-                value={formValues.email}
-                onChange={handleChange('email')}
-              />
-            </div>
+            <FormInput
+              id="loginEmail"
+              name="loginEmail"
+              type="email"
+              placeholder="이메일을 입력하세요"
+              autoComplete="username"
+              value={formValues.email}
+              onChange={handleChange('email')}
+              icon={ICONS.mail}
+            />
           </FormField>
 
           <FormField label="비밀번호" labelFor="loginPassword">
-            <div className="auth-input auth-input--with-action">
-              <div className="auth-input__left">
-                <span className="auth-input__icon">
-                  <img src={ICONS.lock} alt="" aria-hidden="true" />
-                </span>
-                <input
-                  id="loginPassword"
-                  name="loginPassword"
-                  type="password"
-                  placeholder="비밀번호를 입력하세요"
-                  className="auth-input__control"
-                  autoComplete="current-password"
-                  value={formValues.password}
-                  onChange={handleChange('password')}
-                />
-              </div>
-              <button
-                type="button"
-                className="auth__icon-button auth__icon-button--muted"
-                aria-label="비밀번호 표시"
-              >
-                <img src={ICONS.eyeOff} alt="" aria-hidden="true" />
-              </button>
-            </div>
+            <PasswordInput
+              id="loginPassword"
+              name="loginPassword"
+              placeholder="비밀번호를 입력하세요"
+              autoComplete="current-password"
+              value={formValues.password}
+              onChange={handleChange('password')}
+              icon={ICONS.lock}
+            />
           </FormField>
 
           <div className="auth-login-options">
@@ -154,18 +140,7 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
             </button>
           </div>
 
-          {feedback && (
-            <p
-              className={
-                feedback.type === 'success'
-                  ? 'auth-message auth-message--success'
-                  : 'auth-message auth-message--error'
-              }
-              role={feedback.type === 'success' ? 'status' : 'alert'}
-            >
-              {feedback.message}
-            </p>
-          )}
+          <FeedbackMessage type={feedback?.type} message={feedback?.message} />
 
           <button
             type="submit"
@@ -176,33 +151,7 @@ const LoginPage = ({ onBack, onGoSignUp, onSuccess }) => {
           </button>
         </form>
 
-        <section className="auth-social">
-          <div className="auth-social__divider" aria-hidden="true">
-            <span className="auth-social__line" />
-            <span className="auth-social__label">또는</span>
-            <span className="auth-social__line" />
-          </div>
-          <div className="auth-social__buttons">
-            <button type="button" className="auth-social__button auth-social__button--kakao">
-              <span className="auth-social__icon auth-social__icon--kakao" aria-hidden="true">
-                K
-              </span>
-              <span>카카오로 계속하기</span>
-            </button>
-            <button type="button" className="auth-social__button auth-social__button--google">
-              <span className="auth-social__icon" aria-hidden="true">
-                <img src={ICONS.google} alt="" aria-hidden="true" />
-              </span>
-              <span>Google로 계속하기</span>
-            </button>
-            <button type="button" className="auth-social__button auth-social__button--naver">
-              <span className="auth-social__icon auth-social__icon--naver" aria-hidden="true">
-                N
-              </span>
-              <span>네이버로 계속하기</span>
-            </button>
-          </div>
-        </section>
+        <SocialLoginButtons />
 
         <p className="auth-footer">
           <span>아직 계정이 없으신가요?</span>

@@ -1,6 +1,88 @@
+import { useNavigate } from 'react-router-dom'
 import './Main.css'
+import ProductCard from '../components/ProductCard'
 
-const MainPage = ({ onLogout }) => {
+const POPULAR_PRODUCTS = [
+  {
+    id: 'popular-1',
+    name: '프리미엄 런닝화',
+    price: 129000,
+    originalPrice: 211475,
+    discountRate: 39,
+    rating: 4.8,
+    ratingCount: 256,
+  },
+  {
+    id: 'popular-2',
+    name: '어반 라이프 재킷',
+    price: 89000,
+    originalPrice: 129000,
+    discountRate: 31,
+    rating: 4.6,
+    ratingCount: 142,
+  },
+  {
+    id: 'popular-3',
+    name: '노이즈 캔슬링 헤드폰',
+    price: 199000,
+    originalPrice: 259000,
+    discountRate: 23,
+    rating: 4.9,
+    ratingCount: 98,
+  },
+  {
+    id: 'popular-4',
+    name: '스마트 피트니스 워치',
+    price: 159000,
+    originalPrice: 189000,
+    discountRate: 16,
+    rating: 4.7,
+    ratingCount: 312,
+  },
+]
+
+const RELATED_PRODUCTS = [
+  {
+    id: 'related-1',
+    name: '스마트워치',
+    price: 349000,
+    rating: 4.7,
+  },
+  {
+    id: 'related-2',
+    name: '무선 이어폰',
+    price: 189000,
+    rating: 4.5,
+  },
+  {
+    id: 'related-3',
+    name: '러닝 팬츠',
+    price: 79000,
+    rating: 4.6,
+  },
+  {
+    id: 'related-4',
+    name: '경량 바람막이',
+    price: 99000,
+    rating: 4.4,
+  },
+  {
+    id: 'related-5',
+    name: '프리미엄 양말 3팩',
+    price: 19000,
+    rating: 4.8,
+  },
+  {
+    id: 'related-6',
+    name: '워터프루프 백팩',
+    price: 129000,
+    rating: 4.6,
+  },
+]
+
+const MainPage = () => {
+  const navigate = useNavigate()
+
   return (
     <div className="main-page">
       <header className="main-header">
@@ -9,7 +91,7 @@ const MainPage = ({ onLogout }) => {
           <span className="main-header__logo-text">K-Shop</span>
         </div>
         <div className="main-header__actions">
-          <button type="button" className="main-header__avatar">
+          <button type="button" className="main-header__avatar" onClick={() => navigate('/mypage')}>
             K
           </button>
           <button type="button" className="main-header__icon-button" aria-label="찜">
@@ -78,25 +160,8 @@ const MainPage = ({ onLogout }) => {
             </button>
           </div>
           <div className="main-grid">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <article key={`popular-${index}`} className="main-card">
-                <div className="main-card__media main-card__media--placeholder" />
-                <div className="main-card__body">
-                  <h3 className="main-card__name">프리미엄 런닝화</h3>
-                  <div className="main-card__price">
-                    <span className="main-card__price-current">129,000원</span>
-                    <span className="main-card__price-original">
-                      211,475원 <span className="main-card__badge">39%</span>
-                    </span>
-                  </div>
-                  <div className="main-card__rating">
-                    <span className="main-card__stars" aria-hidden="true">
-                      ★★★★★
-                    </span>
-                    <span className="main-card__rating-text">4.8 (256)</span>
-                  </div>
-                </div>
-              </article>
+            {POPULAR_PRODUCTS.map((product) => (
+              <ProductCard key={product.id} variant="grid" {...product} />
             ))}
           </div>
         </section>
@@ -112,20 +177,8 @@ const MainPage = ({ onLogout }) => {
             </button>
           </div>
           <div className="main-scroll">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <article key={`related-${index}`} className="main-scroll__item">
-                <div className="main-scroll__media main-scroll__media--placeholder" />
-                <div className="main-scroll__body">
-                  <h3 className="main-scroll__name">스마트워치</h3>
-                  <p className="main-scroll__price">349,000원</p>
-                  <div className="main-scroll__rating">
-                    <span className="main-scroll__rating-icon" aria-hidden="true">
-                      ★
-                    </span>
-                    <span className="main-scroll__rating-text">4.7</span>
-                  </div>
-                </div>
-              </article>
+            {RELATED_PRODUCTS.map((product) => (
+              <ProductCard key={product.id} variant="scroll" {...product} />
             ))}
           </div>
         </section>

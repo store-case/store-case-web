@@ -10,4 +10,7 @@ export const API_ENDPOINTS = {
   seller: {
     createProduct: `${API_BASE_URL}/api/seller/products`,
   },
+  catalog: {
+    categories: `${API_BASE_URL}/api/catalog/category`,
+  },
 }

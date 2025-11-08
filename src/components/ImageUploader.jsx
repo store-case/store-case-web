@@ -10,9 +10,11 @@ const generateId = () =>
 
 export const createImageItem = () => ({
   id: generateId(),
-  file: null,
   preview: '',
-  data: '',
+  imageUrl: '',
+  imageId: '',
+  status: 'idle',
+  error: null,
 })
 
 export const revokePreview = (preview) => {
@@ -49,6 +51,7 @@ const ImageUploader = ({
   maxImages = MAX_IMAGE_COUNT,
   addButtonLabel = '이미지 추가',
   inputIdPrefix = 'productImage',
+  onUpload,
 }) => {
   const safeImages = useMemo(() => ensurePlaceholder(images), [images])
   const filledImageCount = safeImages.filter((item) => Boolean(item.preview)).length
@@ -69,24 +72,29 @@ const ImageUploader = ({
 
     target.value = ''
 
-    const objectUrl =
-      typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(file) : ''
+    const objectUrl = typeof URL !== 'undefined' && URL.createObjectURL ? URL.createObjectURL(file) : ''
 
     try {
-      const dataUrl = await readFileAsDataUrl(file)
+      let previewSource = objectUrl
+      if (!previewSource) {
+        previewSource = await readFileAsDataUrl(file)
+      }
+
       updateImages((prev) => {
         let updated = prev.map((input) => {
           if (input.id !== inputId) return input
 
-          if (input.preview) {
+          if (input.preview && input.preview !== previewSource) {
             revokePreview(input.preview)
           }
 
           return {
             ...input,
-            file,
-            preview: objectUrl || dataUrl,
-            data: dataUrl,
+            preview: previewSource,
+            imageUrl: onUpload ? '' : previewSource,
+            imageId: '',
+            status: onUpload ? 'uploading' : 'success',
+            error: null,
           }
         })
 
@@ -103,10 +111,47 @@ const ImageUploader = ({
 
         return updated
       })
+
+      if (onUpload) {
+        const result = await onUpload(file)
+        const remoteUrl = result?.imageUrl || previewSource
+        if (result?.imageUrl && objectUrl) {
+          revokePreview(objectUrl)
+        }
+        updateImages((prev) =>
+          prev.map((input) =>
+            input.id === inputId
+              ? {
+                  ...input,
+                  preview: remoteUrl || '',
+                  imageUrl: remoteUrl || '',
+                  imageId: result?.imageId !== undefined && result?.imageId !== null ? String(result.imageId) : '',
+                  status: 'success',
+                  error: null,
+                }
+              : input,
+          ),
+        )
+      }
     } catch (error) {
       if (objectUrl) {
         revokePreview(objectUrl)
       }
+      const errorMessage = error?.message || '이미지 업로드에 실패했습니다. 다시 시도해주세요.'
+      updateImages((prev) =>
+        prev.map((input) =>
+          input.id === inputId
+            ? {
+                ...input,
+                preview: '',
+                imageUrl: '',
+                imageId: '',
+                status: 'error',
+                error: errorMessage,
+              }
+            : input,
+        ),
+      )
       // eslint-disable-next-line no-console
       console.error('이미지 파일을 읽을 수 없습니다.', error)
     }
@@ -172,6 +217,12 @@ const ImageUploader = ({
             {input.preview && (
               <div className="product-register__image-preview">
                 <img src={input.preview} alt={`미리보기 ${index + 1}`} />
+                {input.status === 'uploading' ? (
+                  <div className="product-register__image-status">
+                    <span className="product-register__image-spinner" aria-hidden="true" />
+                    <span>업로드 중...</span>
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   className="product-register__image-remove"
@@ -182,6 +233,11 @@ const ImageUploader = ({
                 </button>
               </div>
             )}
+            {input.status === 'error' && input.error ? (
+              <p className="product-register__image-error" role="alert">
+                {input.error}
+              </p>
+            ) : null}
           </div>
         ))}
       </div>

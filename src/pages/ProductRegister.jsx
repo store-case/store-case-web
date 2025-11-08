@@ -37,6 +37,7 @@ const ProductRegisterPage = () => {
   const [categories, setCategories] = useState([])
   const [categoryStatus, setCategoryStatus] = useState('idle')
   const [categoryError, setCategoryError] = useState(null)
+  const hasUploadingImages = imageInputs.some((input) => input.status === 'uploading')
 
   const storeName = useMemo(() => user?.name || '스토어', [user?.name])
   const optionEnabled = Boolean(option)
@@ -111,6 +112,37 @@ const ProductRegisterPage = () => {
     loadCategories()
   }, [loadCategories])
 
+  const uploadProductImage = useCallback(
+    async (file) => {
+      if (!file) {
+        throw new Error('업로드할 파일이 없습니다.')
+      }
+      const formData = new FormData()
+      formData.append('file', file)
+
+      try {
+        const response = await apiClient.post(API_ENDPOINTS.catalog.uploadProductImage, formData, {
+          token: accessToken,
+        })
+        const imageId = response?.data?.imageId
+        const imageUrl = response?.data?.imageUrl
+        if (!imageUrl) {
+          throw new Error('이미지 URL을 확인할 수 없습니다.')
+        }
+        return {
+          imageId: imageId !== undefined && imageId !== null ? String(imageId) : '',
+          imageUrl,
+        }
+      } catch (error) {
+        if (error instanceof ApiError) {
+          throw new Error(error.message || '이미지 업로드에 실패했습니다.')
+        }
+        throw new Error('이미지 업로드 중 문제가 발생했습니다.')
+      }
+    },
+    [accessToken],
+  )
+
   const handleChange = (field) => (event) => {
     const { value } = event.target
     setFormValues((prev) => ({ ...prev, [field]: value }))
@@ -148,6 +180,14 @@ const ProductRegisterPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (submitting) return
+
+    if (hasUploadingImages) {
+      setFeedback({
+        type: 'error',
+        message: '이미지 업로드가 완료될 때까지 기다려주세요.',
+      })
+      return
+    }
 
     const hasOption = Boolean(option)
     const { isValid, firstError } = validateAll({ ...formValues, hasOption })
@@ -221,6 +261,8 @@ const ProductRegisterPage = () => {
       productStock = Number(formValues.stock)
     }
 
+    const uploadedImages = imageInputs.filter((input) => Boolean(input.imageUrl))
+
     const resolvedCategoryValue = formValues.category
       ? (() => {
           const numeric = Number(formValues.category)
@@ -237,9 +279,10 @@ const ProductRegisterPage = () => {
       shippingFee: 0,
       status: 'ACTIVE',
       tags: [],
-      thumbnailUrl: '',
+      thumbnailUrl: uploadedImages[0]?.imageUrl || '',
       description: formValues.description,
-      detailImages: imageInputs.filter((input) => input.data).map((input) => input.data).slice(0, 5),
+      detailImages: uploadedImages.map((input) => input.imageUrl).slice(0, 5),
+      imageIds: uploadedImages.map((input) => input.imageId).filter(Boolean),
       options: formattedOption ? [formattedOption] : [],
     }
 
@@ -277,7 +320,7 @@ const ProductRegisterPage = () => {
         <p className="product-register__intro">{storeName}님의 새로운 상품을 소개해주세요.</p>
         <FeedbackMessage type={feedback?.type} message={feedback?.message} variant="product" />
 
-        <ImageUploader images={imageInputs} onChange={setImageInputs} maxImages={5} />
+        <ImageUploader images={imageInputs} onChange={setImageInputs} maxImages={5} onUpload={uploadProductImage} />
 
         <section className="product-register__section">
           <label className="product-register__label" htmlFor="productName">
@@ -410,11 +453,21 @@ const ProductRegisterPage = () => {
         <div className="product-register__empty" aria-hidden="true">
           * 필수 입력 항목
         </div>
-        <button type="submit" className="product-register__submit" form="product-register-form" disabled={submitting}>
+        <button
+          type="submit"
+          className="product-register__submit"
+          form="product-register-form"
+          disabled={submitting || hasUploadingImages}
+        >
           <img src={ICONS.add} alt="" aria-hidden="true" />
           {submitting ? '등록 중...' : '상품 등록하기'}
         </button>
-        <button type="button" className="product-register__reset" onClick={resetForm} disabled={submitting}>
+        <button
+          type="button"
+          className="product-register__reset"
+          onClick={resetForm}
+          disabled={submitting || hasUploadingImages}
+        >
           초기화
         </button>
       </footer>

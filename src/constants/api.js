@@ -12,5 +12,6 @@ export const API_ENDPOINTS = {
   },
   catalog: {
     categories: `${API_BASE_URL}/api/catalog/category`,
+    uploadProductImage: `${API_BASE_URL}/api/catalog/product/image/upload`,
   },
 }

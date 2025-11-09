@@ -1,6 +1,10 @@
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './Main.css'
 import ProductCard from '../components/ProductCard'
+import CategorySidebar from '../components/CategorySidebar'
+import { ApiError, apiClient } from '../utils/apiClient'
+import { API_ENDPOINTS } from '../constants/api'
 
 const POPULAR_PRODUCTS = [
   {
@@ -82,13 +86,71 @@ const RELATED_PRODUCTS = [
 
 const MainPage = () => {
   const navigate = useNavigate()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [categories, setCategories] = useState([])
+  const [categoryStatus, setCategoryStatus] = useState('idle')
+  const [categoryError, setCategoryError] = useState(null)
+
+  const loadCategories = useCallback(async () => {
+    setCategoryStatus('loading')
+    setCategoryError(null)
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.catalog.categories)
+      const payload = Array.isArray(response?.data) ? response.data : []
+      setCategories(payload)
+      setCategoryStatus('success')
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : '카테고리 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
+      setCategoryError(message)
+      setCategoryStatus('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isSidebarOpen || categoryStatus !== 'idle') {
+      return
+    }
+    loadCategories()
+  }, [isSidebarOpen, categoryStatus, loadCategories])
+
+  useEffect(() => {
+    if (!isSidebarOpen) {
+      return undefined
+    }
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsSidebarOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isSidebarOpen])
+
+  const handleSidebarOpen = () => setIsSidebarOpen(true)
+  const handleSidebarClose = () => setIsSidebarOpen(false)
+  const handleCategorySelect = () => setIsSidebarOpen(false)
+  const handleRetry = () => {
+    if (categoryStatus === 'loading') {
+      return
+    }
+    loadCategories()
+  }
 
   return (
     <div className="main-page">
       <header className="main-header">
-        <div className="main-header__logo">
-          <div className="main-header__logo-icon">K</div>
-          <span className="main-header__logo-text">K-Shop</span>
+        <div className="main-header__lead">
+          <button type="button" className="main-header__menu" aria-label="카테고리 메뉴 열기" onClick={handleSidebarOpen}>
+            <span className="main-header__menu-icon" aria-hidden="true" />
+          </button>
+          <div className="main-header__logo">
+            <div className="main-header__logo-icon">K</div>
+            <span className="main-header__logo-text">K-Shop</span>
+          </div>
         </div>
         <div className="main-header__actions">
           <button type="button" className="main-header__avatar" onClick={() => navigate('/mypage')}>
@@ -183,6 +245,16 @@ const MainPage = () => {
           </div>
         </section>
       </main>
+
+      <CategorySidebar
+        isOpen={isSidebarOpen}
+        categories={categories}
+        isLoading={categoryStatus === 'loading'}
+        error={categoryError}
+        onClose={handleSidebarClose}
+        onRetry={handleRetry}
+        onSelect={handleCategorySelect}
+      />
     </div>
   )
 }

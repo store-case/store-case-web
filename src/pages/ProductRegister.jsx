@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './ProductRegister.css'
 import PageHeader from '../components/PageHeader'
@@ -9,9 +9,7 @@ import ICONS from '../constants/icons'
 import { API_ENDPOINTS } from '../constants/api'
 import { useAuth } from '../contexts/AuthContext'
 import useFormValidation from '../hooks/useFormValidation'
-import { apiClient } from '../utils/apiClient'
-
-const CATEGORY_PRESETS = ['신발', '전자기기', '가방', '패션', '스포츠', '가전', '뷰티']
+import { ApiError, apiClient } from '../utils/apiClient'
 
 const DEFAULT_FORM = {
   name: '',
@@ -19,6 +17,13 @@ const DEFAULT_FORM = {
   price: '',
   stock: '',
   category: '',
+}
+
+const normalizeCategoryId = (value) => {
+  if (value === null || value === undefined) {
+    return ''
+  }
+  return String(value)
 }
 
 const ProductRegisterPage = () => {
@@ -29,6 +34,9 @@ const ProductRegisterPage = () => {
   const [feedback, setFeedback] = useState(null)
   const [option, setOption] = useState(null)
   const [imageInputs, setImageInputs] = useState([createImageItem()])
+  const [categories, setCategories] = useState([])
+  const [categoryStatus, setCategoryStatus] = useState('idle')
+  const [categoryError, setCategoryError] = useState(null)
 
   const storeName = useMemo(() => user?.name || '스토어', [user?.name])
   const optionEnabled = Boolean(option)
@@ -75,6 +83,34 @@ const ProductRegisterPage = () => {
     }
   }, [optionEnabled])
 
+  const loadCategories = useCallback(async () => {
+    setCategoryStatus('loading')
+    setCategoryError(null)
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.catalog.categories)
+      const payload = Array.isArray(response?.data) ? response.data : []
+      const normalized = payload
+        .map(({ id, name }) => {
+          if (id === null || id === undefined || !name) {
+            return null
+          }
+          return { id: normalizeCategoryId(id), name }
+        })
+        .filter(Boolean)
+      setCategories(normalized)
+      setCategoryStatus('success')
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : '카테고리 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'
+      setCategoryError(message)
+      setCategoryStatus('error')
+    }
+  }, [])
+
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
+
   const handleChange = (field) => (event) => {
     const { value } = event.target
     setFormValues((prev) => ({ ...prev, [field]: value }))
@@ -85,11 +121,19 @@ const ProductRegisterPage = () => {
   }
 
   const handleCategoryToggle = (value) => {
-    setFormValues((prev) => ({ ...prev, category: prev.category === value ? '' : value }))
+    const normalized = normalizeCategoryId(value)
+    setFormValues((prev) => ({ ...prev, category: prev.category === normalized ? '' : normalized }))
     clearError('category')
     if (feedback) {
       setFeedback(null)
     }
+  }
+
+  const handleCategoryRetry = () => {
+    if (categoryStatus === 'loading') {
+      return
+    }
+    loadCategories()
   }
 
   const resetForm = () => {
@@ -177,10 +221,17 @@ const ProductRegisterPage = () => {
       productStock = Number(formValues.stock)
     }
 
+    const resolvedCategoryValue = formValues.category
+      ? (() => {
+          const numeric = Number(formValues.category)
+          return Number.isNaN(numeric) ? formValues.category : numeric
+        })()
+      : ''
+
     const requestBody = {
       name: formValues.name,
       summary: '',
-      category: formValues.category,
+      category: resolvedCategoryValue,
       price: hasOption ? 0 : productPrice,
       stock: hasOption ? 0 : productStock,
       shippingFee: 0,
@@ -303,18 +354,36 @@ const ProductRegisterPage = () => {
           <span className="product-register__label">
             카테고리<span className="product-register__badge">*</span>
           </span>
-          <div className="product-register__category-list">
-            {CATEGORY_PRESETS.map((category) => (
-              <button
-                key={category}
-                type="button"
-                className="product-register__category"
-                aria-pressed={formValues.category === category}
-                onClick={() => handleCategoryToggle(category)}
-              >
-                {category}
-              </button>
-            ))}
+          <div className="product-register__category-list" role="group" aria-live="polite">
+            {categoryStatus === 'loading' ? (
+              <div className="product-register__category-state">
+                카테고리를 불러오는 중입니다.
+              </div>
+            ) : null}
+            {categoryStatus === 'error' ? (
+              <div className="product-register__category-state">
+                <p>{categoryError}</p>
+                <button type="button" className="product-register__category-retry" onClick={handleCategoryRetry}>
+                  다시 시도
+                </button>
+              </div>
+            ) : null}
+            {categoryStatus === 'success' && categories.length === 0 ? (
+              <div className="product-register__category-state">사용 가능한 카테고리가 없습니다.</div>
+            ) : null}
+            {categoryStatus === 'success' && categories.length > 0
+              ? categories.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    className="product-register__category"
+                    aria-pressed={formValues.category === category.id}
+                    onClick={() => handleCategoryToggle(category.id)}
+                  >
+                    {category.name}
+                  </button>
+                ))
+              : null}
           </div>
         </section>
 

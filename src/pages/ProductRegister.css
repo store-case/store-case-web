@@ -152,6 +152,31 @@
   color: #4338ca;
 }
 
+.product-register__category-state {
+  flex-basis: 100%;
+  border: 1px dashed #cbd5f5;
+  border-radius: 12px;
+  padding: 14px 12px;
+  font-size: 13px;
+  color: #475569;
+  text-align: center;
+  background-color: #f8fafc;
+}
+
+.product-register__category-state p {
+  margin: 0 0 8px;
+}
+
+.product-register__category-retry {
+  border: none;
+  background: none;
+  color: #4f46e5;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+}
+
 .product-register__section--divider {
   border-top: 1px solid #e5e7eb;
   padding-top: 24px;

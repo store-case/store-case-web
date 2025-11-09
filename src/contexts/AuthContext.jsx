@@ -34,6 +34,20 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined
+    }
+    const handleTokenRefresh = (event) => {
+      const nextToken = typeof event.detail === 'string' ? event.detail : ''
+      setRawAccessToken(nextToken)
+    }
+    window.addEventListener('auth:token-refresh', handleTokenRefresh)
+    return () => {
+      window.removeEventListener('auth:token-refresh', handleTokenRefresh)
+    }
+  }, [])
+
   const signIn = useCallback((payload) => {
     if (!payload) return
 

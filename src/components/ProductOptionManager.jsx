@@ -122,17 +122,6 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
       return
     }
 
-    if (option.values.some((item) => item.label === trimmedLabel)) {
-      clearFeedback()
-      updateOption((prev) => ({
-        ...prev,
-        valueInput: '',
-        valuePriceInput: '',
-        valueStockInput: '',
-      }))
-      return
-    }
-
     clearFeedback()
     updateOption((prev) => ({
       ...prev,
@@ -141,27 +130,6 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
       valuePriceInput: '',
       valueStockInput: '',
     }))
-  }
-
-  const handleOptionValuePriceKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      handleAddOptionValue()
-    }
-  }
-
-  const handleOptionValueLabelKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      handleAddOptionValue()
-    }
-  }
-
-  const handleOptionValueStockKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      handleAddOptionValue()
-    }
   }
 
   const handleRemoveOptionValue = (valueId) => {
@@ -235,7 +203,6 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
                 placeholder="예: 블랙"
                 value={option.valueInput}
                 onChange={handleOptionValueLabelChange}
-                onKeyDown={handleOptionValueLabelKeyDown}
               />
               <div className="product-register__option-price-input">
                 <input
@@ -245,7 +212,6 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
                   placeholder="0"
                   value={option.valuePriceInput}
                   onChange={handleOptionValuePriceChange}
-                  onKeyDown={handleOptionValuePriceKeyDown}
                 />
                 <span>원</span>
               </div>
@@ -257,7 +223,6 @@ const ProductOptionManager = ({ option, onOptionChange, onFeedbackChange, onEnab
                   placeholder="0"
                   value={option.valueStockInput}
                   onChange={handleOptionValueStockChange}
-                  onKeyDown={handleOptionValueStockKeyDown}
                 />
                 <span>개</span>
               </div>

@@ -213,21 +213,17 @@ const ProductRegisterPage = () => {
         return
       }
 
-      if (option.values.length === 0) {
-        setFeedback({
-          type: 'error',
-          message: '옵션 값을 최소 한 개 이상 추가해주세요.',
-        })
-        return
-      }
-
       const normalizedValues = option.values
         .map(({ label, price, stock }) => {
           const trimmedLabel = label.trim()
+          const hasPrice = price !== '' && price !== null && price !== undefined
+          const hasStock = stock !== '' && stock !== null && stock !== undefined
+          if (!trimmedLabel || !hasPrice || !hasStock) {
+            return null
+          }
           const numericPrice = Number(price)
           const numericStock = Number(stock)
           if (
-            !trimmedLabel ||
             Number.isNaN(numericPrice) ||
             Number.isNaN(numericStock) ||
             numericPrice < 0 ||
@@ -263,27 +259,36 @@ const ProductRegisterPage = () => {
 
     const uploadedImages = imageInputs.filter((input) => Boolean(input.imageUrl))
 
-    const resolvedCategoryValue = formValues.category
-      ? (() => {
-          const numeric = Number(formValues.category)
-          return Number.isNaN(numeric) ? formValues.category : numeric
-        })()
-      : ''
+    const resolvedCategoryId = (() => {
+      const numeric = Number(formValues.category)
+      return Number.isNaN(numeric) ? formValues.category : numeric
+    })()
+
+    const imageIds = uploadedImages
+      .map((input) => {
+        const numeric = Number(input.imageId)
+        return Number.isNaN(numeric) ? input.imageId : numeric
+      })
+      .filter((value) => value !== null && value !== undefined && value !== '')
 
     const requestBody = {
-      name: formValues.name,
-      summary: '',
-      category: resolvedCategoryValue,
-      price: hasOption ? 0 : productPrice,
-      stock: hasOption ? 0 : productStock,
-      shippingFee: 0,
-      status: 'ACTIVE',
-      tags: [],
-      thumbnailUrl: uploadedImages[0]?.imageUrl || '',
+      productName: formValues.name,
       description: formValues.description,
-      detailImages: uploadedImages.map((input) => input.imageUrl).slice(0, 5),
-      imageIds: uploadedImages.map((input) => input.imageId).filter(Boolean),
-      options: formattedOption ? [formattedOption] : [],
+      categoryId: resolvedCategoryId,
+      imageIds,
+    }
+
+    if (hasOption && formattedOption) {
+      requestBody.optionName = formattedOption.name
+      requestBody.options = formattedOption.values.map(({ label, price, stock }) => ({
+        optionDetail: label,
+        price,
+        stock,
+      }))
+    } else {
+      requestBody.price = productPrice
+      requestBody.stock = productStock
+      requestBody.options = []
     }
 
     setSubmitting(true)

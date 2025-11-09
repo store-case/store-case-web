@@ -1,3 +1,5 @@
+import { API_ENDPOINTS } from '../constants/api'
+
 export class ApiError extends Error {
   constructor(message, status, data) {
     super(message)
@@ -7,6 +9,10 @@ export class ApiError extends Error {
   }
 }
 
+const ACCESS_TOKEN_KEY = 'accessToken'
+const TOKEN_REFRESH_EVENT = 'auth:token-refresh'
+let refreshPromise = null
+
 const parseJson = async (response) => {
   try {
     return await response.json()
@@ -15,14 +21,68 @@ const parseJson = async (response) => {
   }
 }
 
+const getStoredAccessToken = () => {
+  if (typeof localStorage === 'undefined') {
+    return ''
+  }
+  return localStorage.getItem(ACCESS_TOKEN_KEY) || ''
+}
+
+const persistAccessToken = (token) => {
+  if (typeof localStorage === 'undefined') {
+    return
+  }
+  if (token) {
+    localStorage.setItem(ACCESS_TOKEN_KEY, token)
+  } else {
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+  }
+}
+
+const notifyTokenRefresh = (token) => {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.dispatchEvent(new CustomEvent(TOKEN_REFRESH_EVENT, { detail: token || '' }))
+}
+
 const resolveToken = (token) => {
-  if (typeof token === 'string') {
+  if (typeof token === 'string' && token.trim()) {
     return token
   }
-  if (typeof localStorage !== 'undefined') {
-    return localStorage.getItem('accessToken') || ''
+  return getStoredAccessToken()
+}
+
+const refreshAccessToken = async () => {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const response = await fetch(API_ENDPOINTS.auth.refresh, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const payload = await parseJson(response)
+      if (!response.ok) {
+        const message = payload?.message || '토큰 갱신에 실패했습니다.'
+        throw new ApiError(message, response.status, payload)
+      }
+      const nextToken = payload?.data?.accessToken || payload?.accessToken
+      if (!nextToken) {
+        throw new ApiError('새로운 액세스 토큰을 확인할 수 없습니다.', response.status, payload)
+      }
+      persistAccessToken(nextToken)
+      notifyTokenRefresh(nextToken)
+      return nextToken
+    })()
+      .catch((error) => {
+        persistAccessToken('')
+        notifyTokenRefresh('')
+        throw error
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
   }
-  return ''
+  return refreshPromise
 }
 
 export const apiRequest = async ({
@@ -34,35 +94,55 @@ export const apiRequest = async ({
   skipAuth = false,
   credentials = 'include',
 } = {}) => {
-  const finalHeaders = { ...headers }
   const isFormData = typeof FormData !== 'undefined' && data instanceof FormData
 
-  if (!isFormData) {
-    finalHeaders['Content-Type'] = finalHeaders['Content-Type'] || 'application/json'
-  }
+  const performRequest = async (authToken) => {
+    const finalHeaders = { ...headers }
 
-  if (!skipAuth) {
-    const resolvedToken = resolveToken(token)
-    if (resolvedToken) {
-      finalHeaders.Authorization = resolvedToken
+    if (!isFormData) {
+      finalHeaders['Content-Type'] = finalHeaders['Content-Type'] || 'application/json'
     }
+
+    if (!skipAuth && authToken) {
+      finalHeaders.Authorization = authToken
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers: finalHeaders,
+      credentials,
+      body: data === undefined ? undefined : isFormData ? data : JSON.stringify(data),
+    })
+
+    const payload = await parseJson(response)
+    return { response, payload }
   }
 
-  const response = await fetch(url, {
-    method,
-    headers: finalHeaders,
-    credentials,
-    body: data === undefined ? undefined : isFormData ? data : JSON.stringify(data),
-  })
+  let authToken = !skipAuth ? resolveToken(token) : ''
+  let shouldRetry = !skipAuth
 
-  const payload = await parseJson(response)
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { response, payload } = await performRequest(authToken)
+    if (response.ok) {
+      return payload
+    }
 
-  if (!response.ok) {
     const errorMessage = payload?.message || '요청에 실패했습니다.'
+
+    if (shouldRetry && response.status === 401) {
+      try {
+        authToken = await refreshAccessToken()
+        shouldRetry = false
+        continue
+      } catch (refreshError) {
+        throw refreshError
+      }
+    }
+
     throw new ApiError(errorMessage, response.status, payload)
   }
 
-  return payload
+  throw new ApiError('요청을 처리할 수 없습니다.', 500)
 }
 
 export const apiClient = {
